@@ -49,7 +49,7 @@ The system analyzes uploaded photos for:
 
 1. **Start the FastAPI server (Run this in the terminal)**
    ```
-   uvicorn api:app --reload
+   uvicorn api:app --port 8001
    ```
 
 2. **Access the web interface**
