@@ -1,0 +1,11 @@
+opencv-python
+numpy
+torch
+torchvision
+mtcnn
+retina-face
+flask
+pillow
+fastapi
+uvicorn
+deepface

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passport Photo Validator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .upload-form {
+            margin-bottom: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .result h3 {
+            margin-top: 0;
+        }
+        .result p {
+            margin: 5px 0;
+        }
+        .valid {
+            color: green;
+        }
+        .invalid {
+            color: red;
+        }
+        .loading {
+            display: none;
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid red;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Passport Photo Validator</h1>
+        <form class="upload-form" id="uploadForm">
+            <input type="file" id="imageInput" name="file" accept="image/*" required>
+            <button type="submit">Validate</button>
+        </form>
+        
+        <div class="loading" id="loading">Analyzing image... please wait</div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="result" id="result" style="display: none;">
+            <h3>Validation Results:</h3>
+            <p><strong>Dimensions:</strong> <span id="dimensions"></span></p>
+            <p><strong>Background:</strong> <span id="background"></span></p>
+            <p><strong>Face Positioning:</strong> <span id="facePositioning"></span></p>
+            <p><strong>Emotion:</strong> <span id="emotion"></span></p>
+            <p><strong>Head Covering:</strong> <span id="headCovering"></span></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            // Show loading, hide previous results and errors
+            document.getElementById("loading").style.display = "block";
+            document.getElementById("result").style.display = "none";
+            document.getElementById("error").style.display = "none";
+            
+            try {
+                const fileInput = document.getElementById("imageInput");
+                
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    throw new Error("Please select an image file");
+                }
+                
+                const formData = new FormData();
+                formData.append("file", fileInput.files[0]);
+                
+                console.log("Sending request to /validate endpoint...");
+                
+                const response = await fetch("/validate", {
+                    method: "POST",
+                    body: formData,
+                });
+                
+                console.log("Response status:", response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status} ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log("API response:", result);
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                // Show the results container
+                document.getElementById("result").style.display = "block";
+                
+                // Display each validation result
+                updateResult("dimensions", result.dimensions);
+                updateResult("background", result.background);
+                updateResult("facePositioning", result.face_positioning);
+                updateResult("emotion", result.emotion);
+                updateResult("headCovering", result.head_covering);
+                
+            } catch (error) {
+                console.error("Error:", error);
+                const errorElement = document.getElementById("error");
+                errorElement.textContent = `Error: ${error.message}`;
+                errorElement.style.display = "block";
+            } finally {
+                document.getElementById("loading").style.display = "none";
+            }
+        });
+        
+        function updateResult(elementId, resultData) {
+            const element = document.getElementById(elementId);
+            
+            if (!resultData) {
+                console.warn(`No result data for ${elementId}`);
+                element.textContent = "No data available";
+                element.className = "invalid";
+                return;
+            }
+            
+            console.log(`Updating ${elementId}:`, resultData);
+            
+            // Check if the response has the expected format
+            if (resultData.message === undefined || resultData.valid === undefined) {
+                console.warn(`Invalid result format for ${elementId}:`, resultData);
+                element.textContent = "Invalid result format";
+                element.className = "invalid";
+                return;
+            }
+            
+            // Set the result text with emoji
+            element.textContent = `${resultData.message} ${resultData.valid ? "✅" : "❌"}`;
+            element.className = resultData.valid ? "valid" : "invalid";
+        }
+    </script>
+</body>
+</html>
