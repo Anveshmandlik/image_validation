@@ -53,7 +53,7 @@ The system analyzes uploaded photos for:
    ```
 
 2. **Access the web interface**
-   Open your browser and go to http://127.0.0.1:8000/
+   Open your browser and go to http://127.0.0.1:8001/
 
 3. **Upload and validate photos**
    - Click "Choose File" to select a passport photo
@@ -70,14 +70,6 @@ The system analyzes uploaded photos for:
    - Expression analysis uses DeepFace to detect emotions
    - Head covering detection looks for obstructions in the upper face area
 3. Results are returned to the frontend and displayed to the user
-
-## Challenges & Solutions
-
-The development process included several technical challenges:
-
-- **Integration issues**: Connecting the front-end with the API required careful error handling
-- **DeepFace compatibility**: The emotion validation needed modifications to handle in-memory images
-- **Error handling**: Robust error handling was implemented for all validation steps
 
 ## Future Improvements
 
