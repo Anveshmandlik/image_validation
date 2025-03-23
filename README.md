@@ -71,14 +71,6 @@ The system analyzes uploaded photos for:
    - Head covering detection looks for obstructions in the upper face area
 3. Results are returned to the frontend and displayed to the user
 
-## Challenges & Solutions
-
-The development process included several technical challenges:
-
-- **Integration issues**: Connecting the front-end with the API required careful error handling
-- **DeepFace compatibility**: The emotion validation needed modifications to handle in-memory images
-- **Error handling**: Robust error handling was implemented for all validation steps
-
 ## Future Improvements
 
 Planned future enhancements include:
