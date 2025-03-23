@@ -1,4 +1,3 @@
-# Import libraries
 import traceback
 import tempfile
 import os
@@ -9,8 +8,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import cv2
 import numpy as np
-from mtcnn import MTCNN
-from deepface import DeepFace
+
+# Import validation functions from image_validation.py
+from image_validation import (
+    validate_dimensions,
+    validate_background,
+    validate_face_positioning,
+    validate_emotion,
+    validate_head_covering,
+)
 
 app = FastAPI()
 
@@ -23,81 +29,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-# Validation functions
-def validate_dimensions(image, required_width=413, required_height=531):
-    try:
-        height, width, _ = image.shape
-        is_valid = width == required_width and height == required_height
-        message = f"Dimensions: {width}x{height} (should be {required_width}x{required_height})"
-        return bool(is_valid), message
-    except Exception as e:
-        print(f"Error in validate_dimensions: {str(e)}")
-        return False, f"Failed to check dimensions: {str(e)}"
-
-
-def validate_background(image, threshold=180):
-    try:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        white_pixels = np.sum(gray > threshold)
-        total_pixels = gray.size
-        white_percentage = (white_pixels / total_pixels) * 100
-        is_valid = white_percentage > 80
-        message = f"Background is {white_percentage:.1f}% white (should be >80%)"
-        return bool(is_valid), message
-    except Exception as e:
-        print(f"Error in validate_background: {str(e)}")
-        return False, f"Failed to check background: {str(e)}"
-
-
-def validate_face_positioning(image):
-    try:
-        detector = MTCNN()
-        results = detector.detect_faces(image)
-        if not results:
-            return False, "No face detected"
-        return True, "Face positioning appears valid"
-    except Exception as e:
-        print(f"Error in validate_face_positioning: {str(e)}")
-        return False, f"Failed to check face position: {str(e)}"
-
-
-def validate_emotion(image_path):
-    try:
-        print(f"Analyzing emotion for: {image_path}")
-        if not os.path.exists(image_path):
-            return False, "Image file not found"
-
-        # Simplified version - just check if DeepFace can analyze
-        result = DeepFace.analyze(
-            img_path=image_path, actions=["emotion"], enforce_detection=False
-        )
-        return True, "Expression appears neutral"
-    except Exception as e:
-        print(f"Error in validate_emotion: {str(e)}")
-        return False, f"Failed to check expression: {str(e)}"
-
-
-def validate_head_covering(image):
-    try:
-        # Simplified version for testing
-        return True, "No head covering detected"
-    except Exception as e:
-        print(f"Error in validate_head_covering: {str(e)}")
-        return False, f"Failed to check for head coverings: {str(e)}"
-
-
-# API endpoint to validate image
 @app.post("/validate")
 async def validate_image(file: UploadFile = File(...)):
     temp_path = None
     try:
         print(f"Received file: {file.filename}")
 
-        # Read the uploaded image
         contents = await file.read()
         if not contents:
             return JSONResponse(
@@ -117,14 +57,23 @@ async def validate_image(file: UploadFile = File(...)):
 
         print(f"Image decoded successfully. Shape: {image.shape}")
 
-        # Save to temp file for DeepFace
         fd, temp_path = tempfile.mkstemp(suffix=".jpg")
         os.close(fd)
         cv2.imwrite(temp_path, image)
         print(f"Saved temporary file: {temp_path}")
+        print("API Image Properties:")
+        api_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        print(f"API Image mean brightness: {api_gray.mean()}")
+        print(f"API Image brightness std: {api_gray.std()}")
+
+        # Also check the temp file that's being used for head covering
+        temp_image = cv2.imread(temp_path)
+        temp_gray = cv2.cvtColor(temp_image, cv2.COLOR_BGR2GRAY)
+        print(f"Temp file mean brightness: {temp_gray.mean()}")
+        print(f"Temp file brightness std: {temp_gray.std()}")
+
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Run validations one by one
         print("Starting validations...")
         dimensions_result, dimensions_message = validate_dimensions(image)
         print(f"Dimensions: {dimensions_result}, {dimensions_message}")
@@ -142,10 +91,9 @@ async def validate_image(file: UploadFile = File(...)):
         emotion_result, emotion_message = validate_emotion(temp_path)
         print(f"Emotion: {emotion_result}, {emotion_message}")
 
-        head_covering_result, head_covering_message = validate_head_covering(image)
+        head_covering_result, head_covering_message = validate_head_covering(temp_path)
         print(f"Head covering: {head_covering_result}, {head_covering_message}")
 
-        # Prepare response
         response = {
             "dimensions": {
                 "valid": bool(dimensions_result),
@@ -178,7 +126,6 @@ async def validate_image(file: UploadFile = File(...)):
             content={"error": f"Server error: {error_msg}"}, status_code=500
         )
     finally:
-        # Clean up temporary file
         if temp_path and os.path.exists(temp_path):
             try:
                 os.unlink(temp_path)
