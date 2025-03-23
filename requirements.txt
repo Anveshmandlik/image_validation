@@ -9,3 +9,5 @@ pillow
 fastapi
 uvicorn
 deepface
+tf_keras
+multipart
