@@ -24,7 +24,7 @@ The system analyzes uploaded photos for:
 
 1. **Clone the repository**
    ```
-   git clone https://github.com/Anveshmandlik/vfs_project.git
+   git clone https://github.com/Anveshmandlik/image_validation.git
    cd vfs_project
    ```
 
